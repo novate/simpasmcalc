@@ -149,13 +149,14 @@ __PLUS PROC		NEAR
 	MOV		[SI], AX
 	ADD		SI, 2
 	DEC		FLAG
+	RET
 __PLUS ENDP
 
 ; NAME: __MINUS
 ; INSTRUCTION: Processes responsing '-' input.
 ; REG OCCUPATION: AX.
 ; INPUT: AX.
-; OUTPUT: AX, MAINANS.
+; OUTPUT: AX.
 
 __MINUS PROC	NEAR
 	MOV		[SI], AX
@@ -170,13 +171,14 @@ _MINUSINPUT:
 	AND		AX, 000FH		; Change ascii to number.
 	NEG		AX
 	PUSH	AX
+	RET
 __MINUS ENDP
 
 ; NAME: __MTPLY
 ; INSTRUCTION: Processes responsing '*' input.
 ; REG OCCUPATION: AX, BX.
 ; INPUT: AX.
-; OUTPUT: AX, MAINANS.
+; OUTPUT: AX.
 
 __MTPLY PROC	NEAR
 	PUSH	BX
@@ -189,19 +191,24 @@ _MTPLYINPUT:
 	CMP		AL, 39H
 	JA		_MTPLYINPUT		; Illegal inputs > 39H.
 	AND		AX, 000FH		; Change ascii to number.
-	IMUL	AX, BX
+	IMUL	AL, BL
 	POP		BX
 	PUSH	AX
+	RET
 __MTPLY ENDP
 
 ; NAME: __DVIDE
 ; INSTRUCTION: Processes responsing '/' input.
-; REG OCCUPATION: AX.
-; INPUT: AX.
-; OUTPUT: AX, MAINANS.
+; REG OCCUPATION: AX, BX, DX.
+; INPUT: AX, DX.
+; OUTPUT: AX, DX, REMAIN.
 
 __DVIDE PROC	NEAR
+	PUSH	BX
 	
+	POP		BX
+	PUSH	AX
+	RET
 __DVIDE ENDP
 
 ; NAME: __FINAL
@@ -212,6 +219,7 @@ __DVIDE ENDP
 
 __FINAL PROC	NEAR
 	
+	RET
 __FINAL ENDP
 
 _CODE ENDS
