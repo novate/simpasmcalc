@@ -54,9 +54,9 @@ _MAIN PROC	FAR
 	PUSH	AX
 	MOV		AX, _MYDATA
 	MOV		DS, AX
-	; Main program starts here.
+; Main program starts here.
 	
-	; Initialization starts here.
+; Initialization starts here.
 	SHOW	STR1
 	CRLF
 	SHOW	STR2
@@ -69,7 +69,9 @@ _MAIN PROC	FAR
 	MOV		DX, 0
 	CRLF
 	SHOW	STR4
-	; Initialization ends here.
+	LEA		SI, MAINANS		; Initialize SI as index for MAINANS.
+	LEA		DI, REMAIN		; Initialize DI as index for REMAIN.
+; Initialization ends here.
 	
 _INPUT:
 	MOV	AX, 0100H
@@ -95,7 +97,7 @@ _COMPARE:
 _DIGITS:
 	CMP		FLAG, 0
 	JNE		_INPUT
-	AND		AL, 0FH		; Change ascii to number.
+	AND		AX, 000FH		; Change ascii to number.
 	PUSH	AX
 	INC		FLAG
 	JMP		_INPUT
@@ -128,19 +130,89 @@ _DVIDE:
 	CALL	__DVIDE
 	JMP		_INPUT
 
-	; Main program ends here.
+_FINAL:
+	CMP		FLAG, 0
+	JE		_INPUT
+	POP		AX
+	CALL	__FINAL
+; Main program ends here.
 	RET
 _MAIN	ENDP
 
-; NAME: _PLUS
-; INSTRUCTION: .
-; REG OCCUPATION:
-; INPUT:
-; OUTPUT:
+; NAME: __PLUS
+; INSTRUCTION: Processes responsing '+' input.
+; REG OCCUPATION: AX.
+; INPUT: AX, SI.
+; OUTPUT: MAINANS, FLAG.
 
-_PRINTH PROC	NEAR
+__PLUS PROC		NEAR
+	MOV		[SI], AX
+	ADD		SI, 2
+	DEC		FLAG
+__PLUS ENDP
+
+; NAME: __MINUS
+; INSTRUCTION: Processes responsing '-' input.
+; REG OCCUPATION: AX.
+; INPUT: AX.
+; OUTPUT: AX, MAINANS.
+
+__MINUS PROC	NEAR
+	MOV		[SI], AX
+	ADD		SI, 2
+_MINUSINPUT:
+	MOV		AX, 0100H
+	INT		21H
+	CMP		AL, 30H
+	JB		_MINUSINPUT		; Illegal inputs < 30H.
+	CMP		AL, 39H
+	JA		_MINUSINPUT		; Illegal inputs > 39H.
+	AND		AX, 000FH		; Change ascii to number.
+	NEG		AX
+	PUSH	AX
+__MINUS ENDP
+
+; NAME: __MTPLY
+; INSTRUCTION: Processes responsing '*' input.
+; REG OCCUPATION: AX, BX.
+; INPUT: AX.
+; OUTPUT: AX, MAINANS.
+
+__MTPLY PROC	NEAR
+	PUSH	BX
+	MOV		BX, AX
+_MTPLYINPUT:
+	MOV		AX, 0100H
+	INT		21H
+	CMP		AL, 30H
+	JB		_MTPLYINPUT		; Illegal inputs < 30H.
+	CMP		AL, 39H
+	JA		_MTPLYINPUT		; Illegal inputs > 39H.
+	AND		AX, 000FH		; Change ascii to number.
+	IMUL	AX, BX
+	POP		BX
+	PUSH	AX
+__MTPLY ENDP
+
+; NAME: __DVIDE
+; INSTRUCTION: Processes responsing '/' input.
+; REG OCCUPATION: AX.
+; INPUT: AX.
+; OUTPUT: AX, MAINANS.
+
+__DVIDE PROC	NEAR
 	
-_PRINTH	ENDP
+__DVIDE ENDP
+
+; NAME: __FINAL
+; INSTRUCTION: Final processing.
+; REG OCCUPATION: .
+; INPUT: MAINANS, REMAIN.
+; OUTPUT: FIN.
+
+__FINAL PROC	NEAR
+	
+__FINAL ENDP
 
 _CODE ENDS
 	END	_MAIN
