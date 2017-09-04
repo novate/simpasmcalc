@@ -71,7 +71,28 @@ _MAIN PROC	FAR
 	SHOW	STR4
 	; Initialization ends here.
 	
-	
+_INPUT:
+	MOV	AX, 0100H
+	INT	21H
+
+_COMPARE:
+	CMP		AL, 0DH
+	JE		_FINAL		; Input CR.
+	CMP		AL, 2BH
+	JE		_PLUS		; Input '+'.
+	CMP		AL, 2DH
+	JE		_MINUS		; Input '-'.
+	CMP		AL, 2AH
+	JE		_MTPLY		; Input '*'.
+	CMP		AL, 2FH
+	JE		_DVIDE		; Input '/'.
+	CMP		AL, 30H
+	JB		_COMPARE
+	CMP		AL, 39H
+	JBE		_DIGITS
+	JMP		_COMPARE
+
+_
 	
 	; Main program ends here.
 	RET
