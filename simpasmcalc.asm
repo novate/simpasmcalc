@@ -1,12 +1,21 @@
 _MYDATA SEGMENT
-	STR1	DB	0AH, 0DH, '---------------------$'
-	STR2	DB	0AH, 0DH, '  SIMPLE CALCULATOR  $'
-	STR3	DB	0AH, 0DH, '  BY ZHANG ZHEN YAN  $'
+	STR0	DB	0AH, 0DH, '--------------------------------$'
+	STR1	DB	0AH, 0DH, '|                              |$'
+	STR2	DB	0AH, 0DH, '|     Simple ASM Calculator    |$'
+	STR3	DB	0AH, 0DH, '|  By 1551713 - ZHANG Zhenyan  |$'
 	STR4	DB	0AH, 0DH, 'S=$'
-	STR5	DB	0AH, 0DH, 'Thank you and bye~$'
-	MAINANS		DW	9 DUP(0)
-	REMAIN		DB	2 DUP(0)
-	FLAG		DB	0
+	STR5	DB	0AH, 0DH, 'Thank you and goodbye~$'
+	STR6	DB	0AH, 0DH, 'ILLEGAL CHARACTER! Execution terminated.$'
+	STR7	DB	0AH, 0DH, 'TOO MORE DIGITS! Execution terminated.$'
+	STR8	DB	0AH, 0DH, 'TOO MORE OPERATORS! Execution terminated.$'
+	MAINANS	DW	0, 0, 0, 0, 0, 0, 0, 0, 0
+	REMAIN	DW	0, 0
+	DIVFLG	DB	0		; Flag of continuous dividing.
+	FLAG	DB	0
+	PLSCNT	DB	0
+	MNSCNT	DB	0
+	MPYCNT	DB	0
+	DIVCNT	DB	0
 _MYDATA	ENDS
 
 ; NAME: SHOW
@@ -53,14 +62,14 @@ _MAIN PROC	FAR
 	MOV		AX, _MYDATA
 	MOV		DS, AX
 ; Main program starts here.
-	
+
 ; Initialization starts here.
+	SHOW	STR0
 	SHOW	STR1
-	CRLF
 	SHOW	STR2
 	SHOW	STR3
-	CRLF
 	SHOW	STR1
+	SHOW	STR0
 	MOV		AX, 0
 	MOV		BX, 0
 	MOV		CX, 0
@@ -70,107 +79,121 @@ _MAIN PROC	FAR
 	LEA		SI, MAINANS		; Initialize SI as index for MAINANS.
 	LEA		DI, REMAIN		; Initialize DI as index for REMAIN.
 ; Initialization ends here.
-	
-_INPUT:
-	MOV	AX, 0100H
-	INT	21H
 
+_INPUT:
+	MOV		AX, 0100H
+	INT		21H
 _COMPARE:
 	CMP		AL, 0DH
-	JE		_FINAL		; Input CR.
+	JE		_FINAL0		; Input CR.
 	CMP		AL, 2BH
 	JE		_PLUS		; Input '+'.
 	CMP		AL, 2DH
-	JE		_MINUS		; Input '-'.
+	JE		_MINUS0		; Input '-'.
 	CMP		AL, 2AH
-	JE		_MTPLY		; Input '*'.
+	JE		_MTPLY0		; Input '*'.
 	CMP		AL, 2FH
-	JE		_DVIDE		; Input '/'.
+	JE		_DVIDE0		; Input '/'.
 	CMP		AL, 30H
-	JB		_INPUT		; Illegal inputs < 30H.
+	JB		_ERROR1		; Illegal inputs < 30H.
 	CMP		AL, 39H
 	JBE		_DIGITS		; Input 30H ~ 39H.
-	JMP		_INPUT		; Illegal inputs > 39H.
-
+_ERROR1:
+	SHOW	STR6
+	CRLF
+	JMP		_END
+_ERROR2:
+	SHOW	STR7
+	CRLF
+	JMP		_END
 _DIGITS:
+	MOV		DIVFLG, 0
 	CMP		FLAG, 0
-	JNE		_INPUT
+	JNE		_ERROR2
 	AND		AX, 000FH		; Change ascii to number.
-	PUSH	AX
-	INC		FLAG
+	MOV		[SI], AX
+	MOV		FLAG, 1
 	JMP		_INPUT
-
+_DVIDE0:
+	JMP		_DVIDE
+_FINAL0:
+	JMP		_FINAL
+_MINUS0:
+	JMP		_MINUS
+_MTPLY0:
+	JMP		_MTPLY
 _PLUS:
 	CMP		FLAG, 0
-	JE		_INPUT
-	POP		AX
+	JE		_ERROR3
+	INC		PLSCNT
+	CMP		PLSCNT, 3
+	JNB		_ERROR3
 	CALL	__PLUS
 	JMP		_INPUT
-
+_INPUT0:
+	JMP		_INPUT
 _MINUS:
 	CMP		FLAG, 0
-	JE		_INPUT
-	POP		AX
+	JE		_ERROR3
+	INC		MNSCNT
+	CMP		MNSCNT, 3
+	JNB		_ERROR3
 	CALL	__MINUS
 	JMP		_INPUT
-
+_ERROR3:
+	SHOW	STR8
+	CRLF
+	JMP		_END
 _MTPLY:
 	CMP		FLAG, 0
-	JE		_INPUT
-	POP		AX
+	JE		_ERROR3
+	INC		MPYCNT
+	CMP		MPYCNT, 3
+	JNB		_ERROR3
 	CALL	__MTPLY
 	JMP		_INPUT
-
 _DVIDE:
 	CMP		FLAG, 0
-	JE		_INPUT
-	POP		AX
+	JE 		_ERROR3
+	INC		DIVCNT
+	CMP		DIVCNT, 3
+	JNB		_ERROR3
 	CALL	__DVIDE
-	JMP		_INPUT
-
+	JMP		_INPUT0
 _FINAL:
 	CMP		FLAG, 0
-	JE		_INPUT
-	POP		AX
+	JE		_INPUT0
 	CALL	__FINAL
 	SHOW	STR5
+	CRLF
 ; Main program ends here.
+
+_END:
 	RET
-_MAIN	ENDP
+_MAIN ENDP
 
 ; NAME: __PLUS
 ; INSTRUCTION: Processes responsing '+' input.
-; REG OCCUPATION: AX.
-; INPUT: AX, SI.
-; OUTPUT: MAINANS, FLAG.
+; REG OCCUPATION: None.
+; INPUT: SI.
+; OUTPUT: None.
 
-__PLUS PROC		NEAR
-	CMP		DX, 0
-	JE		_PLUSNEXT
-	MOV		[DI], DL
-	INC		DI
-	MOV		DX, 0
-_PLUSNEXT:
-	MOV		[SI], AX
+__PLUS PROC
+	MOV		DIVFLG, 0
 	ADD		SI, 2
-	DEC		FLAG
+	MOV		FLAG, 0
 	RET
 __PLUS ENDP
 
 ; NAME: __MINUS
 ; INSTRUCTION: Processes responsing '-' input.
 ; REG OCCUPATION: AX.
-; INPUT: AX.
-; OUTPUT: AX.
+; INPUT: SI.
+; OUTPUT: None.
 
-__MINUS PROC	NEAR
-	CMP		DX, 0
-	JE		_MINUSNEXT
-	MOV		[DI], DL
-	INC		DI
-	MOV		DX, 0
-_MINUSNEXT:
-	MOV		[SI], AX
+__MINUS PROC
+	MOV		DIVFLG, 0
+	PUSH	AX
 	ADD		SI, 2
 _MINUSINPUT:
 	MOV		AX, 0100H
@@ -181,25 +204,22 @@ _MINUSINPUT:
 	JA		_MINUSINPUT		; Illegal inputs > 39H.
 	AND		AX, 000FH		; Change ascii to number.
 	NEG		AX
-	PUSH	AX
+	MOV		[SI], AX
+	POP		AX
 	RET
 __MINUS ENDP
 
 ; NAME: __MTPLY
 ; INSTRUCTION: Processes responsing '*' input.
 ; REG OCCUPATION: AX, BX.
-; INPUT: AX.
-; OUTPUT: AX.
+; INPUT: SI.
+; OUTPUT: None.
 
-__MTPLY PROC	NEAR
-	CMP		DX, 0
-	JE		_MTPLYNEXT
-	MOV		[DI], DL
-	INC		DI
-	MOV		DX, 0
-_MTPLYNEXT:
+__MTPLY PROC
+	MOV		DIVFLG, 0
+	PUSH	AX
 	PUSH	BX
-	MOV		BX, AX
+	MOV		BX, [SI]
 _MTPLYINPUT:
 	MOV		AX, 0100H
 	INT		21H
@@ -208,24 +228,34 @@ _MTPLYINPUT:
 	CMP		AL, 39H
 	JA		_MTPLYINPUT		; Illegal inputs > 39H.
 	AND		AX, 000FH		; Change ascii to number.
-	IMUL	AL, BL
+	IMUL	BL
+	MOV		[SI], AX
 	POP		BX
-	PUSH	AX
+	POP		AX
 	RET
 __MTPLY ENDP
 
 ; NAME: __DVIDE
 ; INSTRUCTION: Processes responsing '/' input.
 ; REG OCCUPATION: AX, BX, DX.
-; INPUT: AX, DX.
+; INPUT: SI, DI.
 ; OUTPUT: AX, DX, REMAIN.
 
-__DVIDE PROC	NEAR
+__DVIDE PROC
+	PUSH	AX
 	PUSH	BX
+	PUSH	DX
+	MOV		AX, [SI]
 	MOV		BX, 10
-	IMUL	BL
+	IMUL	BX
+	CMP		DIVFLG, 1
+	JE		_DVIDEDOWN
+	CMP		WORD PTR [DI], 0
+	JE		_DVIDEDOWN
+	ADD		DI, 2
+_DVIDEDOWN:
+	MOV		DX, [DI]
 	ADD		AX, DX
-	MOV		DX, 0
 	MOV		BX, AX
 _DVIDEINPUT:
 	MOV		AX, 0100H
@@ -236,77 +266,99 @@ _DVIDEINPUT:
 	JA		_DVIDEINPUT		; Illegal inputs > 39H.
 	AND		AX, 000FH		; Change ascii to number.
 	XCHG	AX, BX
+	CWD
 	IDIV	BX
+
+; Rounding begins.
 	ADD		DX, DX
+	CMP		DX, 0
+	JL		_DVIDENEGNEXT
 	CMP		DX, BX
-	JB		_DVIDENEXT
-	INC		AX				; Rounding.
+	JL		_DVIDENEXT
+	INC		AX
+	JMP		_DVIDENEXT
+_DVIDENEGNEXT:				; Rounding for negative numbers.
+	NEG		DX
+	CMP		DX, BX
+	JL		_DVIDENEXT
+	DEC		AX
+; Rounding ends.
+
 _DVIDENEXT:
 	MOV		BX, 10
 	MOV		DX, 0
 	IDIV	BX
+	MOV		[SI], AX
+	MOV		[DI], DX
+	MOV		DIVFLG, 1
+	POP		DX
 	POP		BX
-	PUSH	AX
+	POP		AX
 	RET
 __DVIDE ENDP
 
 ; NAME: __FINAL
 ; INSTRUCTION: Final processing.
-; REG OCCUPATION: AX, BX, CX.
-; INPUT: AX, SI, DI, MAINANS, REMAIN.
-; OUTPUT: FIN.
+; REG OCCUPATION: AX, BX, CX, DX.
+; INPUT: None.
+; OUTPUT: None.
 
-__FINAL PROC	NEAR
+__FINAL PROC
+	PUSH	AX
 	PUSH	BX
 	PUSH	CX
-	CMP		DX, 0
-	JZ		_FINALNEXT
-	MOV		[DI], DL
-	INC		DI
-	MOV		DX, 0
-_FINALNEXT:
+	PUSH	DX
 	SHOW	STR4
-	LEA		BX, MAINANS
-_FINALADD:
-	CMP		BX, SI
-	JE		_FINALADD2
-	ADD		AX, [BX]
-	ADD		BX, 2
-	JMP		_FINALADD
-_FINALADD2:
+	MOV		AX, 0
+	LEA		SI, MAINANS		; Initialize SI as index for MAINANS.
+	LEA		DI, REMAIN		; Initialize DI as index for REMAIN.
+
+; Add all numbers in MAINANS.
+	MOV		CX, 9
+_FINALMAIN:
+	ADD		AX, [SI]
+	ADD		SI, 2
+	LOOP	_FINALMAIN
 	MOV		BX, 10
 	IMUL	BX
-_FINALREMAIN:
-	CMP		BX, DI
-	JE		_FINALREMAIN2
-	ADD		AX, [BX]
-	INC		BX
-	JMP		_FINALREMAIN
-_FINALREMAIN2:
+	ADD		AX, [DI]
+	ADD		AX, [DI + 2]
 	CALL	__PRINTDEC
+	POP		DX
 	POP		CX
 	POP		BX
+	POP		AX
 	RET
 __FINAL ENDP
 
 ; NAME: __PRINTDEC
 ; INSTRUCTION: Exchange hexadecimal number in AX to decimal and print.
-; REG OCCUPATION: AX, BX, CX, DX.
+; REG OCCUPATION: BX, CX, DX.
 ; INPUT: AX.
 ; OUTPUT: None.
 
-__PRINTDEC PROC	NEAR
+__PRINTDEC PROC
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
 	MOV		CX, 0
 	MOV		BX, 10
 	CMP		AX, 0
-	JNL		_CHGLOOP
+	JNL		_CHGLOOP0
 	NEG		AX
+	PUSH	AX
 	MOV		DL, 2DH
 	MOV		AX, 0200H
 	INT		21H
+	POP		AX
+_CHGLOOP0:
+	CMP		AX, 10
+	JNB		_CHGLOOP
+	PUSH	AX
+	MOV		DL, 30H
+	MOV		AX, 0200H
+	INT		21H
+	POP		AX
 _CHGLOOP:
 	MOV		DX, 0
 	IDIV	BX
