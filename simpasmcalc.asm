@@ -8,8 +8,8 @@ _MYDATA SEGMENT
 	STR6	DB	0AH, 0DH, 'ILLEGAL CHARACTER! Execution terminated.$'
 	STR7	DB	0AH, 0DH, 'TOO MORE DIGITS! Execution terminated.$'
 	STR8	DB	0AH, 0DH, 'TOO MORE OPERATORS! Execution terminated.$'
-	MAINANS	DW	0, 0, 0, 0, 0, 0, 0, 0, 0
-	REMAIN	DW	0, 0
+	MAINANS	DW	9 DUP(0)
+	REMAIN	DW	2 DUP(0)
 	DIVFLG	DB	0		; Flag of continuous dividing.
 	FLAG	DB	0
 	PLSCNT	DB	0
@@ -211,14 +211,17 @@ __MINUS ENDP
 
 ; NAME: __MTPLY
 ; INSTRUCTION: Processes responsing '*' input.
-; REG OCCUPATION: AX, BX.
+; REG OCCUPATION: AX, BX, DX.
 ; INPUT: SI.
 ; OUTPUT: None.
 
 __MTPLY PROC
-	MOV		DIVFLG, 0
 	PUSH	AX
 	PUSH	BX
+	PUSH	DX
+	CMP		DIVFLG, 1
+	JE		_MPYDIV
+	MOV		DIVFLG, 0
 	MOV		BX, [SI]
 _MTPLYINPUT:
 	MOV		AX, 0100H
@@ -230,6 +233,29 @@ _MTPLYINPUT:
 	AND		AX, 000FH		; Change ascii to number.
 	IMUL	BL
 	MOV		[SI], AX
+	JMP		_MTPLYEND
+_MPYDIV:
+	MOV		AX, [SI]
+	MOV		BX, 10
+	IMUL	BX
+	MOV		BX, [DI]
+	ADD		BX, AX
+_MTPLYINPUT2:
+	MOV		AX, 0100H
+	INT		21H
+	CMP		AL, 30H
+	JB		_MTPLYINPUT2		; Illegal inputs < 30H.
+	CMP		AL, 39H
+	JA		_MTPLYINPUT2		; Illegal inputs > 39H.
+	AND		AX, 000FH		; Change ascii to number.
+	IMUL	BX
+	MOV		BX, 10
+	CWD
+	IDIV	BX
+	MOV		[SI], AX
+	MOV		[DI], DX
+_MTPLYEND:
+	POP		DX
 	POP		BX
 	POP		AX
 	RET
@@ -286,7 +312,7 @@ _DVIDENEGNEXT:				; Rounding for negative numbers.
 
 _DVIDENEXT:
 	MOV		BX, 10
-	MOV		DX, 0
+	CWD
 	IDIV	BX
 	MOV		[SI], AX
 	MOV		[DI], DX
