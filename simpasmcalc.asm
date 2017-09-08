@@ -8,6 +8,8 @@ _MYDATA SEGMENT
 	STR6	DB	0AH, 0DH, 'ILLEGAL CHARACTER! Execution terminated.$'
 	STR7	DB	0AH, 0DH, 'TOO MORE DIGITS! Execution terminated.$'
 	STR8	DB	0AH, 0DH, 'TOO MORE OPERATORS! Execution terminated.$'
+	STR9	DB	0AH, 0DH, 'ILLEGAL CHARACTER! Input again: $'
+	STR10	DB	0AH, 0DH, 'DIVISOR CANNOT BE ZERO! Input again: $'
 	MAINANS	DW	9 DUP(0)
 	REMAIN	DW	2 DUP(0)
 	DIVFLG	DB	0		; Flag of continuous dividing.
@@ -199,9 +201,14 @@ _MINUSINPUT:
 	MOV		AX, 0100H
 	INT		21H
 	CMP		AL, 30H
-	JB		_MINUSINPUT		; Illegal inputs < 30H.
+	JB		_MINUSINPUTERROR	; Illegal inputs < 30H.
 	CMP		AL, 39H
-	JA		_MINUSINPUT		; Illegal inputs > 39H.
+	JA		_MINUSINPUTERROR	; Illegal inputs > 39H.
+	JMP		_MNSNEXT
+_MINUSINPUTERROR:
+	SHOW	STR9
+	JMP		_MINUSINPUT
+_MNSNEXT:
 	AND		AX, 000FH		; Change ascii to number.
 	NEG		AX
 	MOV		[SI], AX
@@ -227,9 +234,14 @@ _MTPLYINPUT:
 	MOV		AX, 0100H
 	INT		21H
 	CMP		AL, 30H
-	JB		_MTPLYINPUT		; Illegal inputs < 30H.
+	JB		_MTPLYINPUTERROR	; Illegal inputs < 30H.
 	CMP		AL, 39H
-	JA		_MTPLYINPUT		; Illegal inputs > 39H.
+	JA		_MTPLYINPUTERROR	; Illegal inputs > 39H.
+	JMP		_MPYNEXT
+_MTPLYINPUTERROR:
+	SHOW	STR9
+	JMP		_MTPLYINPUT
+_MPYNEXT:
 	AND		AX, 000FH		; Change ascii to number.
 	IMUL	BL
 	MOV		[SI], AX
@@ -244,9 +256,14 @@ _MTPLYINPUT2:
 	MOV		AX, 0100H
 	INT		21H
 	CMP		AL, 30H
-	JB		_MTPLYINPUT2		; Illegal inputs < 30H.
+	JB		_MTPLYINPUT2ERROR	; Illegal inputs < 30H.
 	CMP		AL, 39H
-	JA		_MTPLYINPUT2		; Illegal inputs > 39H.
+	JA		_MTPLYINPUT2ERROR	; Illegal inputs > 39H.
+	JMP		_MPYNEXT2
+_MTPLYINPUT2ERROR:
+	SHOW	STR9
+	JMP		_MTPLYINPUT2
+_MPYNEXT2:
 	AND		AX, 000FH		; Change ascii to number.
 	IMUL	BX
 	MOV		BX, 10
@@ -287,14 +304,23 @@ _DVIDEINPUT:
 	MOV		AX, 0100H
 	INT		21H
 	CMP		AL, 30H
-	JB		_DVIDEINPUT		; Illegal inputs < 30H.
+	JB		_DVIDEINPUTERROR	; Illegal inputs < 30H.
+	JE		_DIVISORZERO
 	CMP		AL, 39H
-	JA		_DVIDEINPUT		; Illegal inputs > 39H.
+	JA		_DVIDEINPUTERROR	; Illegal inputs > 39H.
 	AND		AX, 000FH		; Change ascii to number.
 	XCHG	AX, BX
 	CWD
 	IDIV	BX
+	JMP		_ROUNDING
+_DIVISORZERO:
+	SHOW	STR10
+	JMP		_DVIDEINPUT
+_DVIDEINPUTERROR:
+	SHOW	STR9
+	JMP		_DVIDEINPUT
 
+_ROUNDING:
 ; Rounding begins.
 	ADD		DX, DX
 	CMP		DX, 0
